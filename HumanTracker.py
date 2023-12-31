@@ -2,6 +2,11 @@ import cv2
 import threading
 import numpy as np
 import math
+import rospy
+from mavros_msgs.msg import OverrideRCIn
+from mavros_msgs.srv import CommandBool
+import time
+import sys
 from cvFunctions import *
 
 class HumanTracker():
@@ -32,7 +37,20 @@ class HumanTracker():
 
         self.sp_x, self.sp_y = int(1280/2), int(720/2)
 
+        self.Kp = 0.4
+        self.motor_max = 1700
+        self.motor_min = 1300
+        self.motor_bias = 1500
+        self._throttle_channel = 1
+        self._steering_channel = 0
+
         if auto_init:
+            rospy.init_node('control_test', anonymous=True)
+            try:
+                self.rc_override = rospy.Publisher('mavros/rc/override', OverrideRCIn)
+            except:
+                self.kill = True
+                sys.exit("Make sure that MAVROS is running...")
             self.init_detector()
 
     def init_detector(self):
@@ -53,7 +71,21 @@ class HumanTracker():
         self.control_thread.start()
 
     def motor_control_target(self):
-        pass
+        
+        while not self.kill:
+            error = self.cx - self.sp_x
+            motor_out = (self.Kp * error) + self.motor_bias
+            
+            if motor_out > self.motor_max:
+                motor_out = self.motor_max
+            elif motor_out < self.motor_min:
+                motor_out = self.motor_min
+
+            mssg = OverrideRCIn()
+            mssg.channels[self._throttle_channel] = 1500
+            mssg.channels[self._steering_channel] = motor_out
+            self.rc_override.publish(mssg)
+            time.sleep(0.1)
 
     def human_detection_target(self):
         
@@ -87,8 +119,25 @@ class HumanTracker():
                 except IndexError:
                     continue
                     
-                    
-
             cv2.imshow("Output",img)
             cv2.waitKey(1)
+
+    def arm(self):
+        rospy.wait_for_service('/mavros/cmd/arming')
+        try:
+            armService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
+            armResponse = armService(True)
+            rospy.loginfo(armResponse)
+        except rospy.ServiceException as e:
+            print("Service call failed: %s" %e)
+        time.sleep(1)
+
+    def disarm(self):
+        rospy.wait_for_service('/mavros/cmd/arming')
+        try:
+            armService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
+            armResponse = armService(False)
+            rospy.loginfo(armResponse)
+        except rospy.ServiceException as e:
+            print("Service call failed: %s" %e)
 
