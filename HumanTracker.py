@@ -48,6 +48,7 @@ class HumanTracker():
             rospy.init_node('control_test', anonymous=True)
             try:
                 self.rc_override = rospy.Publisher('mavros/rc/override', OverrideRCIn)
+                self.arm()
             except:
                 self.kill = True
                 sys.exit("Make sure that MAVROS is running...")
@@ -60,6 +61,16 @@ class HumanTracker():
         self.net.setInputScale(1.0/ 127.5)
         self.net.setInputMean((127.5, 127.5, 127.5))
         self.net.setInputSwapRB(True)
+
+    def init_rover(self):
+
+        rospy.init_node('control_test', anonymous=True)
+        try:
+            self.rc_override = rospy.Publisher('mavros/rc/override', OverrideRCIn)
+            self.arm()
+        except:
+            self.kill = True
+            sys.exit("Make sure that MAVROS is running...")
 
     def start_human_detection(self):
 
