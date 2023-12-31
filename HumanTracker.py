@@ -124,13 +124,15 @@ class HumanTracker():
                             i = i[0]
                             box = bbox[i]
                             x,y,w,h = box[0],box[1],box[2],box[3]
-                            putTextRect(img, f'Human {math.ceil(confs[i-1]*100)}%', (max(0, x+8), max(35, y-13)), scale=1.5, thickness=2, colorR=(175,0,175))
-                            cornerRect(img, (x, y, w, h), colorR=(175,0,175), rt=3, t=10, l=int(min(w, h)/8), colorC=(0,255,0))
+                            putTextRect(img, f'Human {math.ceil(confs[i-1]*100)}%', (max(0, x+8), max(35, y-13)), scale=1.5, thickness=2, colorR=(255,0,255))
+                            cornerRect(img, (x, y, w, h), colorR=(255,0,255), rt=3, t=10, l=int(min(w, h)/8), colorC=(0,255,0))
 
                             self.cx, self.cy = int(x + (w//2)), int(y + (h//2))
                             cv2.line(img, (self.cx, self.cy), (self.sp_x, self.sp_y), (0,255,0), 3)
-                            cv2.line(img, (self.cx, int(self.cy-h/2)+3), (self.cx, int(self.cy+h/2)-3), (0,0,0), 2)
-                            cv2.line(img, (int(self.cx-w/2)+3, self.cy), (int(self.cx+w/2)-3, self.cy), (0,0,0), 2)
+                            # cv2.line(img, (self.cx, int(self.cy-h/2)+3), (self.cx, int(self.cy+h/2)-3), (0,0,255), 2)
+                            cv2.line(img, (self.cx, 0), (self.cx, 720), (255,0,0), 1)
+                            # cv2.line(img, (int(self.cx-w/2)+3, self.cy), (int(self.cx+w/2)-3, self.cy), (0,0,255), 2)
+                            cv2.line(img, (0, self.cy), (1280, self.cy), (255,0,0), 1)
                             cv2.circle(img, (self.cx, self.cy), 5, (0, 0, 255), cv2.FILLED)
                             cv2.circle(img, (self.sp_x, self.sp_y), 7, (0, 0, 255), cv2.FILLED)
                         else:
