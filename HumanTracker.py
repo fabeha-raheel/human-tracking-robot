@@ -36,6 +36,7 @@ class HumanTracker():
         self.kill = False
 
         self.sp_x, self.sp_y = int(1280/2), int(720/2)
+        self.cx, self.cy = self.sp_x, self.sp_y
 
         self.Kp = 0.4
         self.motor_max = 1700
@@ -75,11 +76,13 @@ class HumanTracker():
     def start_human_detection(self):
 
         self.detection_thread = threading.Thread(target=self.human_detection_target, daemon=True)
-        self.detection_thread.start() 
+        self.detection_thread.start()
+        # self.detection_thread.join() 
 
     def start_tracking(self):
         self.control_thread = threading.Thread(target=self.motor_control_target, daemon=True)
         self.control_thread.start()
+        self.control_thread.join()
 
     def motor_control_target(self):
         
@@ -92,15 +95,18 @@ class HumanTracker():
             elif motor_out < self.motor_min:
                 motor_out = self.motor_min
 
+            print(motor_out)
             mssg = OverrideRCIn()
             mssg.channels[self._throttle_channel] = 1500
-            mssg.channels[self._steering_channel] = motor_out
+            mssg.channels[self._steering_channel] = int(motor_out)
+            print("Publishing command to motors...")
             self.rc_override.publish(mssg)
-            time.sleep(0.1)
+            time.sleep(0.2)
 
     def human_detection_target(self):
         
         while not self.kill:
+
             success,img = self.cap.read()
             classIds, confs, bbox = self.net.detect(img,confThreshold=self.thres)
 
@@ -127,8 +133,12 @@ class HumanTracker():
                             cv2.line(img, (int(self.cx-w/2)+3, self.cy), (int(self.cx+w/2)-3, self.cy), (0,0,0), 2)
                             cv2.circle(img, (self.cx, self.cy), 5, (0, 0, 255), cv2.FILLED)
                             cv2.circle(img, (self.sp_x, self.sp_y), 7, (0, 0, 255), cv2.FILLED)
+                        else:
+                            self.cx, self.cy = self.sp_x, self.sp_y
                 except IndexError:
                     continue
+            else:
+                self.cx, self.cy = self.sp_x, self.sp_y
                     
             cv2.imshow("Output",img)
             cv2.waitKey(1)
