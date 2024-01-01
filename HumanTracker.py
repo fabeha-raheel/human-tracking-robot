@@ -38,7 +38,7 @@ class HumanTracker():
         self.sp_x, self.sp_y = int(1280/2), int(720/2)
         self.cx, self.cy = self.sp_x, self.sp_y
 
-        self.Kp = 0.4
+        self.Kp = 0.6
         self.motor_max = 1700
         self.motor_min = 1300
         self.motor_bias = 1500
@@ -82,7 +82,6 @@ class HumanTracker():
     def start_tracking(self):
         self.control_thread = threading.Thread(target=self.motor_control_target, daemon=True)
         self.control_thread.start()
-        self.control_thread.join()
 
     def motor_control_target(self):
         
@@ -95,15 +94,24 @@ class HumanTracker():
             elif motor_out < self.motor_min:
                 motor_out = self.motor_min
 
-            print(motor_out)
+            # print(motor_out)
             mssg = OverrideRCIn()
             mssg.channels[self._throttle_channel] = 1500
             mssg.channels[self._steering_channel] = int(motor_out)
-            print("Publishing command to motors...")
+            # print("Publishing command to motors...")
             self.rc_override.publish(mssg)
             time.sleep(0.2)
 
+            if self.kill:
+                mssg.channels[self._throttle_channel] = 1500
+                mssg.channels[self._steering_channel] = 1500
+                self.rc_override.publish(mssg)
+                self.disarm()
+                print("Motor control killed.")
+
     def human_detection_target(self):
+        main_detection_id = 0
+        largest_area = 0
         
         while not self.kill:
 
@@ -124,19 +132,26 @@ class HumanTracker():
                             i = i[0]
                             box = bbox[i]
                             x,y,w,h = box[0],box[1],box[2],box[3]
-                            putTextRect(img, f'Human {math.ceil(confs[i-1]*100)}%', (max(0, x+8), max(35, y-13)), scale=1.5, thickness=2, colorR=(255,0,255))
-                            cornerRect(img, (x, y, w, h), colorR=(255,0,255), rt=3, t=10, l=int(min(w, h)/8), colorC=(0,255,0))
+                            if w*h > largest_area:
+                                main_detection_id = i
+                                largest_area = w*h
+                            else:
+                                self.cx, self.cy = self.sp_x, self.sp_y
+                            
+                    box = bbox[main_detection_id]
+                    x,y,w,h = box[0],box[1],box[2],box[3]
+                    putTextRect(img, f'Human {math.ceil(confs[main_detection_id-1]*100)}%', (max(0, x+8), max(35, y-13)), scale=1.5, thickness=2, colorR=(255,0,255))
+                    cornerRect(img, (x, y, w, h), colorR=(255,0,255), rt=3, t=10, l=int(min(w, h)/8), colorC=(0,255,0))
 
-                            self.cx, self.cy = int(x + (w//2)), int(y + (h//2))
-                            cv2.line(img, (self.cx, self.cy), (self.sp_x, self.sp_y), (0,255,0), 3)
-                            # cv2.line(img, (self.cx, int(self.cy-h/2)+3), (self.cx, int(self.cy+h/2)-3), (0,0,255), 2)
-                            cv2.line(img, (self.cx, 0), (self.cx, 720), (255,0,0), 1)
-                            # cv2.line(img, (int(self.cx-w/2)+3, self.cy), (int(self.cx+w/2)-3, self.cy), (0,0,255), 2)
-                            cv2.line(img, (0, self.cy), (1280, self.cy), (255,0,0), 1)
-                            cv2.circle(img, (self.cx, self.cy), 5, (0, 0, 255), cv2.FILLED)
-                            cv2.circle(img, (self.sp_x, self.sp_y), 7, (0, 0, 255), cv2.FILLED)
-                        else:
-                            self.cx, self.cy = self.sp_x, self.sp_y
+                    self.cx, self.cy = int(x + (w//2)), int(y + (h//2))
+                    cv2.line(img, (self.cx, self.cy), (self.sp_x, self.sp_y), (0,255,0), 3)
+                    # cv2.line(img, (self.cx, int(self.cy-h/2)+3), (self.cx, int(self.cy+h/2)-3), (0,0,255), 2)
+                    cv2.line(img, (self.cx, 0), (self.cx, 720), (255,0,0), 1)
+                    # cv2.line(img, (int(self.cx-w/2)+3, self.cy), (int(self.cx+w/2)-3, self.cy), (0,0,255), 2)
+                    cv2.line(img, (0, self.cy), (1280, self.cy), (255,0,0), 1)
+                    cv2.circle(img, (self.cx, self.cy), 5, (0, 0, 255), cv2.FILLED)
+                    cv2.circle(img, (self.sp_x, self.sp_y), 7, (0, 0, 255), cv2.FILLED)
+                
                 except IndexError:
                     continue
             else:
