@@ -1,5 +1,4 @@
 from HumanTracker import HumanTracker
-import time
 import rospy
 
 tracking_ugv = HumanTracker(auto_init=True)
