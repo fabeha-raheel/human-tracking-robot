@@ -16,7 +16,7 @@ class HumanTracker():
         self.cap = cv2.VideoCapture(0)
         self.cap.set(3,1280)
         self.cap.set(4,720)
-        self.cap.set(10,70)
+        self.cap.set(10,150)
 
         self.thres = 0.6 # Threshold to detect object
         self.nms_threshold = 0.2
