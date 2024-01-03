@@ -9,6 +9,7 @@ import string
 import mediapipe as mp
 import numpy as np
 import cv2 as ocv
+from bounding_box import bounding_box as bb
 
 # %%
 # Tools
@@ -30,6 +31,52 @@ class recognizer:
             num_hands = self.numHands
         )
         self.recog = mp.tasks.vision.GestureRecognizer.create_from_options(self.opts)
+        # self.handKeys = {
+        #     "Closed_Fist": 0,
+        #     "Open_Palm": 1,
+        #     "Victory": 2,
+        #     "Thumb_Up": 3,
+        #     "Thumb_Down": 4,
+        #     "Pointing_Up": 5
+        # }
+        self.handKeys = {
+            "None": "None",
+            "Closed_Fist": "Disarm",
+            "Open_Palm": "Back",
+            "Victory": "Forward",
+            "Thumb_Up": "Right",
+            "Thumb_Down": "Left",
+            "Pointing_Up": "Arm", 
+            "ILoveYou": "XXX"
+        }
+    
+    def plot(self, img: np.array, instances: dict):
+        """
+        This method is used to plot the bboxes and landmarks on image
+
+        Arguments
+        =========
+        img : OpenCV BGR image
+        instances : Inferred instances
+
+        Outputs
+        =======
+        Plotted image
+        """
+        height, width, channel = img.shape
+        for instance in instances:
+            bb.add(
+                img,
+                int(instance['bbox'][0] * width),
+                int(instance['bbox'][1] * height),
+                int(instance['bbox'][2] * width),
+                int(instance['bbox'][3] * height),
+                instance['gestureClass'],
+                'red'
+            )
+            for coord in instance['lmks']:
+                img = ocv.circle(img, (int(coord[0] * width), int(coord[1] * height)), 2, (0, 0, 255), 2) 
+        return img
 
     def __parser__(self, _paRes):
         """
@@ -43,12 +90,19 @@ class recognizer:
             ldat = {
                 'handClass': hClass[i][0].category_name,
                 'handScore': hClass[i][0].score,
-                'gestureClass': hGuest[i][0].category_name,
+                'gestureClass': self.handKeys[hGuest[i][0].category_name],
                 'gestureScore': hGuest[i][0].score,
                 'lmks': list()
             }
             for j in halmks[i]:
                 ldat['lmks'].append([j.x, j.y])
+            ldat['lmks'] = np.array(ldat['lmks'])
+            ldat['bbox'] = [
+                np.amin(ldat['lmks'][:, 0]),
+                np.amin(ldat['lmks'][:, 1]),
+                np.amax(ldat['lmks'][:, 0]),
+                np.amax(ldat['lmks'][:, 1])
+            ]
             fdat.append(ldat)
         return fdat
 

@@ -7,13 +7,19 @@ class Rover():
 
     def __init__(self) -> None:
 
-        rospy.init_node('control_test', anonymous=True)
+        # rospy.init_node('control_test', anonymous=True)
         self.rc_override = rospy.Publisher('mavros/rc/override', OverrideRCIn)
 
         self._throttle_channel = 1
         self._steering_channel = 0
 
+        self.rc_max = 1700
+        self.rc_min = 1300
+        self.rc_center = 1500
+
         self.speeds = ["SLOW", "MEDIUM", "FAST"]
+        
+        self.arm_status = False
 
     def arm(self):
         rospy.wait_for_service('/mavros/cmd/arming')
@@ -21,6 +27,7 @@ class Rover():
             armService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
             armResponse = armService(True)
             rospy.loginfo(armResponse)
+            self.arm_status = True
         except rospy.ServiceException as e:
             print("Service call failed: %s" %e)
         time.sleep(1)
@@ -31,6 +38,7 @@ class Rover():
             armService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
             armResponse = armService(False)
             rospy.loginfo(armResponse)
+            self.arm_status = False
         except rospy.ServiceException as e:
             print("Service call failed: %s" %e)
 
@@ -41,7 +49,7 @@ class Rover():
         # print("Publishing command to motors...")
         self.rc_override.publish(mssg)
 
-    def move_forward(self, speed):
+    def move_forward(self, speed='SLOW'):
         msg = OverrideRCIn()
 
         if speed == 'MEDIUM':
@@ -53,7 +61,7 @@ class Rover():
 
         self.rc_override.publish(msg)
 
-    def move_backward(self, speed):
+    def move_backward(self, speed='SLOW'):
         msg = OverrideRCIn()
 
         if speed == 'MEDIUM':
@@ -65,7 +73,7 @@ class Rover():
 
         self.rc_override.publish(msg)
 
-    def rotate_left(self, speed):
+    def rotate_left(self, speed='SLOW'):
         msg = OverrideRCIn()
 
         if speed == 'MEDIUM':
@@ -77,7 +85,7 @@ class Rover():
 
         self.rc_override.publish(msg)
 
-    def rotate_right(self, speed):
+    def rotate_right(self, speed='SLOW'):
         msg = OverrideRCIn()
 
         if speed == 'MEDIUM':
